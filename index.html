@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>StarDoc Manager Pro</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f2044">
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:Arial,sans-serif;background:#f0f4ff;color:#1e293b;min-height:100vh;}
+
+/* TOP BAR */
+.topbar{background:#0f2044;color:#fff;padding:14px 20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.topbar h1{font-size:18px;font-weight:700;flex:1;}
+.topbar-tabs{display:flex;gap:6px;}
+.tab{padding:7px 14px;border:none;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;background:rgba(255,255,255,.12);color:#fff;}
+.tab.active{background:#f59e0b;color:#0f2044;}
+.user-chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.1);padding:5px 10px 5px 5px;border-radius:20px;font-size:12px;}
+.user-chip img{width:24px;height:24px;border-radius:50%;}
+.user-chip button{background:none;border:none;color:#f59e0b;font-size:11px;font-weight:700;cursor:pointer;}
+
+.wrap{max-width:760px;margin:0 auto;padding:16px;}
+
+/* LOGIN SCREEN */
+.login-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#0f2044,#1a56db);padding:20px;}
+.login-card{background:#fff;border-radius:18px;padding:40px 32px;max-width:380px;width:100%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.login-card .logo{font-size:42px;margin-bottom:8px;}
+.login-card h1{font-size:22px;color:#0f2044;margin-bottom:6px;}
+.login-card p{font-size:13px;color:#64748b;margin-bottom:28px;line-height:1.5;}
+.gsi-btn{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;padding:13px;background:#fff;border:1.5px solid #dadce0;border-radius:10px;font-size:15px;font-weight:600;color:#3c4043;cursor:pointer;transition:box-shadow .2s;}
+.gsi-btn:hover{box-shadow:0 2px 8px rgba(0,0,0,.15);}
+.login-features{margin-top:24px;text-align:left;font-size:12px;color:#64748b;}
+.login-features div{padding:4px 0;}
+#loadingOverlay{position:fixed;inset:0;background:rgba(15,32,68,.92);display:none;align-items:center;justify-content:center;z-index:9999;color:#fff;font-size:15px;flex-direction:column;gap:14px;}
+.spinner{width:36px;height:36px;border:4px solid rgba(255,255,255,.25);border-top-color:#f59e0b;border-radius:50%;animation:spin 0.8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* UPLOAD CARD */
+.upload-card{background:linear-gradient(135deg,#1a56db,#0f2044);border-radius:14px;padding:22px 20px;text-align:center;margin-bottom:16px;color:#fff;}
+.upload-card h2{font-size:17px;margin-bottom:4px;}
+.upload-card p{font-size:12px;opacity:.75;margin-bottom:16px;}
+.upload-btn{background:#f59e0b;color:#0f2044;border:none;padding:13px 28px;font-size:15px;font-weight:700;border-radius:10px;cursor:pointer;}
+#fileInput{display:none;}
+#excelInput{display:none;}
+
+/* STATUS */
+#status{display:none;padding:13px 16px;border-radius:10px;font-size:14px;font-weight:600;margin-bottom:14px;}
+.ok{background:#d1fae5;border:1px solid #10b981;color:#065f46;}
+.err{background:#fef2f2;border:1px solid #ef4444;color:#b91c1c;}
+.info{background:#eff4ff;border:1px solid #1a56db;color:#1a56db;}
+.warn{background:#fff8e1;border:1px solid #f59e0b;color:#92400e;}
+
+/* FORM CARD */
+.form-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.08);display:none;margin-bottom:16px;}
+.form-card h2{font-size:15px;font-weight:700;color:#0f2044;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid #eff4ff;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+@media(max-width:500px){.row2{grid-template-columns:1fr;}}
+.fg{margin-bottom:12px;}
+.fg label{display:block;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;}
+.fg input,.fg select,.fg textarea{width:100%;padding:10px 12px;border:1.5px solid #e3eaf5;border-radius:8px;font-size:14px;outline:none;background:#f8fafd;font-family:Arial,sans-serif;}
+.fg input:focus,.fg select:focus{border-color:#1a56db;background:#fff;}
+.fg textarea{min-height:65px;resize:vertical;}
+hr{border:none;border-top:1px solid #e3eaf5;margin:14px 0;}
+.sec{font-size:13px;font-weight:700;color:#0f2044;margin-bottom:10px;display:flex;align-items:center;gap:6px;}
+
+/* MEMBERS TABLE */
+.mtable{width:100%;border-collapse:collapse;font-size:12px;margin-bottom:8px;}
+.mtable th{background:#0f2044;color:#fff;padding:8px 8px;text-align:left;font-size:11px;white-space:nowrap;}
+.mtable td{padding:6px 6px;border-bottom:1px solid #e3eaf5;vertical-align:middle;}
+.mtable tr:hover td{background:#f8fafd;}
+.mtable input,.mtable select{width:100%;border:1px solid #e3eaf5;border-radius:5px;padding:4px 6px;font-size:11px;background:#f8fafd;}
+.mtable-wrap{overflow-x:auto;}
+.add-row{padding:7px 14px;background:#eff4ff;color:#1a56db;border:1px dashed #1a56db;border-radius:7px;font-size:12px;font-weight:700;cursor:pointer;margin-top:6px;}
+.ped-sel{width:100%;border:1px solid #e3eaf5;border-radius:5px;padding:4px 5px;font-size:11px;background:#f8fafd;}
+.ped-txt-cell{font-size:10px;color:#b91c1c;max-width:160px;word-break:break-word;}
+
+/* SAVE BTN */
+.save-btn{width:100%;padding:14px;background:#1a56db;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer;margin-top:14px;}
+.save-btn:hover{background:#0f2044;}
+.save-btn:disabled{opacity:.5;cursor:not-allowed;}
+
+/* PAGES */
+.page{display:none;}
+.page.active{display:block;}
+
+/* LIST */
+.list-card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.08);}
+.list-card h2{font-size:15px;font-weight:700;color:#0f2044;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;}
+.list-card h2 span{font-size:12px;background:#eff4ff;color:#1a56db;padding:3px 10px;border-radius:20px;font-weight:700;}
+.cust-item{display:flex;align-items:center;gap:12px;padding:11px 0;border-bottom:1px solid #e3eaf5;cursor:pointer;}
+.cust-item:last-child{border-bottom:none;}
+.cust-item:hover{background:#f8fafd;margin:0 -8px;padding:11px 8px;border-radius:8px;}
+.av{width:40px;height:40px;background:#1a56db;color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:13px;flex-shrink:0;}
+.ci{flex:1;min-width:0;}
+.ci .name{font-size:14px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.ci .sub{font-size:12px;color:#64748b;margin-top:2px;}
+.ci .sub2{font-size:11px;color:#94a3b8;margin-top:1px;}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;flex-shrink:0;}
+.badge.due{background:#fef2f2;color:#ef4444;}
+.badge.ok{background:#d1fae5;color:#065f46;}
+.badge.soon{background:#fff8e1;color:#92400e;}
+.empty{text-align:center;color:#94a3b8;padding:24px;font-size:14px;}
+
+/* DETAIL VIEW */
+.back-btn{background:none;border:none;color:#1a56db;font-size:14px;font-weight:700;cursor:pointer;margin-bottom:12px;padding:6px 0;}
+.det-hdr{background:#0f2044;border-radius:12px;padding:18px;display:flex;align-items:center;gap:14px;margin-bottom:14px;flex-wrap:wrap;}
+.det-av{width:54px;height:54px;background:#1a56db;border:3px solid rgba(255,255,255,.3);border-radius:50%;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;font-weight:700;flex-shrink:0;overflow:hidden;}
+.det-av img{width:100%;height:100%;object-fit:cover;border-radius:50%;}
+.det-hinfo h2{font-size:17px;color:#fff;font-weight:700;}
+.det-hinfo p{font-size:12px;color:rgba(255,255,255,.6);margin-top:2px;}
+.det-badge{display:inline-block;margin-top:6px;font-size:11px;font-weight:700;padding:3px 12px;border-radius:20px;background:#f59e0b;color:#0f2044;}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+@media(max-width:500px){.info-grid{grid-template-columns:1fr;}}
+.info-box{background:#fff;border-radius:12px;border:1px solid #e3eaf5;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:14px;}
+.info-box h3{font-size:12px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.4px;margin-bottom:10px;}
+.ir{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #f1f5f9;font-size:13px;}
+.ir:last-child{border-bottom:none;}
+.ir .lb{color:#64748b;}
+.ir .vl{font-weight:600;color:#0f2044;}
+.members-section,.docs-section{background:#fff;border-radius:12px;border:1px solid #e3eaf5;box-shadow:0 2px 8px rgba(0,0,0,.06);padding:14px;margin-bottom:12px;}
+.members-section h3,.docs-section h3{font-size:13px;font-weight:700;color:#0f2044;margin-bottom:10px;}
+.memb-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #f1f5f9;font-size:12px;}
+.memb-row:last-child{border-bottom:none;}
+.memb-name{font-weight:700;}
+.memb-meta{color:#64748b;font-size:11px;}
+.ped-chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;}
+.ped-chip.has{background:#fef2f2;color:#ef4444;}
+.ped-chip.no{background:#d1fae5;color:#065f46;}
+
+.doc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;}
+.doc-item{border:2px dashed #cbd5e1;border-radius:10px;padding:10px 6px;text-align:center;position:relative;}
+.doc-item input[type=file]{display:none;}
+.doc-icon{font-size:26px;margin-bottom:4px;}
+.doc-label{font-size:11px;font-weight:600;color:#64748b;}
+.doc-thumb{width:100%;height:50px;object-fit:cover;border-radius:6px;margin-bottom:4px;}
+.doc-remove{position:absolute;top:4px;right:4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:18px;height:18px;font-size:11px;cursor:pointer;line-height:1;}
+
+.act-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.ab{flex:1;min-width:110px;padding:11px;border:none;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;text-align:center;}
+.ab.blue{background:#eff4ff;color:#1a56db;}
+.ab.wapp{background:#dcfce7;color:#15803d;}
+.ab.green{background:#d1fae5;color:#065f46;}
+.ab.purple{background:#8e44ad;color:#fff;}
+.ab.orange{background:#fff8e1;color:#92400e;}
+.ab.red{background:#fef2f2;color:#b91c1c;}
+
+.sync-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:20px;background:rgba(255,255,255,.1);color:#9fb3d9;}
+.sync-pill.syncing{color:#f59e0b;}
+.sync-pill.synced{color:#34d399;}
+.sync-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+@media(max-width:500px){
+  .topbar{padding:12px 14px;}
+  .topbar h1{font-size:15px;}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING OVERLAY -->
+<div id="loadingOverlay">
+  <div class="spinner"></div>
+  <div id="loadingText">Loading...</div>
+</div>
+
+<!-- LOGIN SCREEN -->
+<div id="loginScreen" class="login-screen">
+  <div class="login-card">
+    <div class="logo">⭐</div>
+    <h1>StarDoc Manager Pro</h1>
+    <p>Sign in with Google to access your customer database, stored securely in your own Google Drive.</p>
+    <div id="gsiButtonContainer" style="display:flex;justify-content:center;"></div>
+    <div class="login-features">
+      <div>✅ Works on PC and Mobile</div>
+      <div>✅ Your data stays in your Google Drive</div>
+      <div>✅ Install as an app — works offline after first load</div>
+      <div>✅ Auto PDF reading, Excel export, renewal alerts</div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="appRoot" style="display:none;">
+<div class="topbar">
+  <h1>⭐ StarDoc Manager Pro</h1>
+  <span id="syncPill" class="sync-pill"><span class="sync-dot"></span><span id="syncText">Synced</span></span>
+  <div class="topbar-tabs">
+    <button class="tab active" onclick="showPage('home',this)">🏠 Home</button>
+    <button class="tab" onclick="showPage('customers',this)">📂 Customers</button>
+    <button class="tab" onclick="showPage('renewal',this)">📅 Renewals</button>
+  </div>
+  <div class="user-chip">
+    <img id="userAvatar" src="" alt="">
+    <span id="userName"></span>
+    <button onclick="signOut()">Sign out</button>
+  </div>
+</div>
+
+<!-- HOME PAGE -->
+<div id="page-home" class="page active">
+<div class="wrap">
+  <div class="upload-card">
+    <h2>📄 Upload Star Health Policy PDF</h2>
+    <p>Reads all fields automatically — Name, Policy, Premium, Members, PED &amp; Dates<br>Stored in your Google Drive · Works on PC &amp; Mobile</p>
+    <input type="file" id="fileInput" accept="application/pdf" onchange="readPDF(event)">
+    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">📂 Choose PDF File</button>
+  </div>
+
+  <div id="status"></div>
+
+  <!-- FORM CARD -->
+  <div class="form-card" id="formCard">
+    <h2>✏️ Review &amp; Save Customer</h2>
+
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px;">
+      <div style="position:relative;">
+        <div id="photoPreview" style="width:60px;height:60px;border-radius:50%;background:#eff4ff;display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;border:2px dashed #cbd5e1;">🧑</div>
+      </div>
+      <div>
+        <input type="file" id="fPhotoInput" accept="image/*" style="display:none;" onchange="previewPhoto(event)">
+        <button type="button" onclick="document.getElementById('fPhotoInput').click()" style="padding:7px 12px;border:1px solid #e3eaf5;border-radius:7px;background:#f8fafd;font-size:12px;cursor:pointer;">Choose file</button>
+        <div style="font-size:11px;color:#64748b;margin-top:4px;">Customer Photo · Tap to upload photo<br>JPG, PNG · optional</div>
+      </div>
+    </div>
+
+    <div class="fg"><label>Customer Name *</label><input id="fName" placeholder="Full name"></div>
+    <div class="row2">
+      <div class="fg"><label>Mobile Number</label><input id="fMobile" placeholder="10-digit mobile"></div>
+      <div class="fg"><label>Email</label><input id="fEmail" placeholder="email@example.com"></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Policy Number</label><input id="fPolicy" placeholder="Policy No."></div>
+      <div class="fg"><label>Product</label>
+        <select id="fProduct">
+          <option>Star Health Assure Insurance</option>
+          <option>Star Comprehensive Insurance</option>
+          <option>Star Super Star Insurance</option>
+          <option>Star Senior Citizens Red Carpet</option>
+          <option>Star Family Health Optima</option>
+          <option>Star Medi Classic Insurance</option>
+          <option>Other</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Premium (₹)</label><input id="fPremium" placeholder="Total premium amount"></div>
+      <div class="fg"><label>Sum Insured (₹)</label><input id="fSum" placeholder="e.g. 50,00,000"></div>
+    </div>
+    <div class="row2">
+      <div class="fg"><label>Policy Start Date</label><input type="date" id="fStart"></div>
+      <div class="fg"><label>Renewal Date</label><input type="date" id="fRenewal"></div>
+    </div>
+
+    <hr>
+    <div class="sec">👨‍👩‍👧 Insured Members</div>
+    <div class="mtable-wrap">
+      <table class="mtable">
+        <thead><tr><th>Name</th><th>Date of Birth</th><th>Relation</th><th>Gender</th><th>Inception Date</th><th>PED</th><th>PED Details</th><th></th></tr></thead>
+        <tbody id="memberBody"></tbody>
+      </table>
+    </div>
+    <button type="button" class="add-row" onclick="addMember()">+ Add Member</button>
+
+    <hr>
+    <div class="sec">📎 Documents</div>
+    <div class="doc-grid" id="docGrid"></div>
+
+    <input type="hidden" id="fDriveFileId" value="">
+    <button type="button" class="save-btn" id="saveBtn" onclick="saveCustomer()">💾 Save Customer</button>
+  </div>
+</div>
+</div>
+
+<!-- CUSTOMERS PAGE -->
+<div id="page-customers" class="page">
+<div class="wrap">
+  <input type="text" id="searchInput" placeholder="🔍 Search name, mobile, policy, member..." style="width:100%;padding:10px 12px;border:1.5px solid #e3eaf5;border-radius:8px;font-size:14px;outline:none;margin-bottom:14px;">
+  <div class="list-card">
+    <h2>📂 All Customers <span id="totalCount">0</span></h2>
+    <div id="allList"></div>
+  </div>
+</div>
+</div>
+
+<!-- RENEWALS PAGE -->
+<div id="page-renewal" class="page">
+<div class="wrap">
+  <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;">
+    <button onclick="downloadExcelReport()" style="flex:1;min-width:180px;background:#1d6f42;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">📊 Download Excel Report</button>
+    <button onclick="document.getElementById('excelInput').click()" style="flex:1;min-width:180px;background:#2563eb;color:#fff;border:none;padding:10px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-weight:600;">📥 Import from Excel</button>
+    <input type="file" id="excelInput" accept=".csv" onchange="importExcel(event)">
+  </div>
+  <div class="list-card" style="margin-bottom:14px;">
+    <h2>🔴 Today's Renewals <span id="todayCount">0</span></h2>
+    <div id="todayList"></div>
+  </div>
+  <div class="list-card" style="margin-bottom:14px;">
+    <h2>🟡 Next 15 Days <span id="soon15Count">0</span></h2>
+    <div id="soon15List"></div>
+  </div>
+  <div class="list-card">
+    <h2>📆 This Month <span id="monthCount">0</span></h2>
+    <div id="monthList"></div>
+  </div>
+</div>
+</div>
+
+<!-- DETAIL VIEW -->
+<div id="page-detail" class="page">
+<div class="wrap">
+  <button class="back-btn" onclick="goBack()">← Back</button>
+  <div id="detailContent"></div>
+</div>
+</div>
+
+</div><!-- /appRoot -->
+
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script src="https://apis.google.com/js/api.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+</script>
+<script src="app.js"></script>
+<script>
+if('serviceWorker' in navigator){
+  window.addEventListener('load',()=>{
+    navigator.serviceWorker.register('./sw.js').catch(e=>console.warn('SW registration failed',e));
+  });
+}
+</script>
+</body>
+</html>
