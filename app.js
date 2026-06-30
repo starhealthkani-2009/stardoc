@@ -352,8 +352,8 @@ function fillForm(text){
 
   // ── EMAIL ──
   const email=get([
-    /E-mail\s*Id\s*[:\-]\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})(?=\s)/,
-    /([a-zA-Z0-9._%+\-]+@(?!starhealth)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/
+    /E-mail\s*Id\s*[:\-]\s*([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i,
+    /([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/
   ]);
   set('fEmail', email||'');
 
