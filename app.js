@@ -351,10 +351,24 @@ function fillForm(text){
   if(!mobile) missing.push('Mobile');
 
   // ── EMAIL ──
-  const email=get([
-    /E-mail\s*Id\s*[:\-]\s*([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i,
-    /([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/
-  ]);
+  // The PDF has multiple "E-mail Id" fields (Proposer, Branch office, Agent).
+  // Reliable anchor: the Proposer's mobile number always appears as "Phone No : <mobile>"
+  // immediately followed (within ~300 chars) by the Proposer's own "E-mail Id : <email>".
+  let email='';
+  if(mobile){
+    const idx=t.indexOf('Phone No : '+mobile) >=0 ? t.indexOf('Phone No : '+mobile) : t.indexOf(mobile);
+    if(idx>=0){
+      const windowText=t.slice(idx, idx+300);
+      const emInWindow=windowText.match(/E-mail\s*Id\s*[:\-]?\s*([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
+      if(emInWindow) email=emInWindow[1];
+    }
+  }
+  if(!email){
+    email=get([
+      /E-mail\s*Id\s*[:\-]\s*([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i,
+      /([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/
+    ]);
+  }
   set('fEmail', email||'');
 
   // ── POLICY NUMBER ──
