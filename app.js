@@ -8,6 +8,10 @@ const DRIVE_SCOPE='https://www.googleapis.com/auth/drive.file';
 const APP_FOLDER_NAME='StarDoc Manager Data';
 const DB_FILE_NAME='stardoc_database.json';
 
+// Known non-customer emails that should NEVER be auto-filled as the customer's email
+// (agent / branch office addresses that appear multiple times in Star Health PDFs)
+const KNOWN_AGENT_EMAILS=['tirupur@starhealth.in','kani.spsubbu@gmail.com'];
+
 let tokenClient=null;
 let accessToken=null;
 let appFolderId=null;
@@ -306,6 +310,16 @@ async function readPDF(event){
   event.target.value='';
 }
 
+// Returns true if an email should NEVER be auto-filled as the customer's email
+// (covers Star Health branch/agent addresses that repeat across the PDF)
+function isBlacklistedEmail(e){
+  if(!e) return true;
+  const lower=e.trim().toLowerCase();
+  if(KNOWN_AGENT_EMAILS.includes(lower)) return true;
+  if(/star[t]?health/i.test(lower)) return true;
+  return false;
+}
+
 function fillForm(text){
   const t=text.replace(/\r/g,' ').replace(/\s+/g,' ');
   const missing=[];
@@ -352,24 +366,50 @@ function fillForm(text){
 
   // ── EMAIL ──
   // The PDF has multiple "E-mail Id" fields (Proposer, Branch office, Agent).
-  // Reliable anchor: the Proposer's mobile number always appears as "Phone No : <mobile>"
-  // immediately followed (within ~300 chars) by the Proposer's own "E-mail Id : <email>".
+  // We collect ALL occurrences in order and skip any known agent/branch addresses
+  // (e.g. tirupur@starhealth.in, kani.spsubbu@gmail.com) so the customer's own
+  // email is the one that gets filled in.
   let email='';
+
+  // Strategy 1: look inside a window right after the proposer's own mobile number,
+  // since that's the most reliable anchor for the proposer's own email.
   if(mobile){
     const idx=t.indexOf('Phone No : '+mobile) >=0 ? t.indexOf('Phone No : '+mobile) : t.indexOf(mobile);
     if(idx>=0){
       const windowText=t.slice(idx, idx+300);
-      const emInWindow=windowText.match(/E-mail\s*Id\s*[:\-]?\s*([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i);
-      if(emInWindow) email=emInWindow[1];
+      const emMatches=[...windowText.matchAll(/E-mail\s*Id\s*[:\-]?\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)];
+      for(const m of emMatches){
+        if(!isBlacklistedEmail(m[1])){ email=m[1]; break; }
+      }
     }
   }
+
+  // Strategy 2: scan ALL "E-mail Id :" occurrences in the whole document in order,
+  // skip blacklisted ones, take the first clean one.
   if(!email){
-    email=get([
-      /E-mail\s*Id\s*[:\-]\s*([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/i,
-      /([a-zA-Z0-9._%+\-]+@(?!star[t]?health)[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/
-    ]);
+    const allMatches=[...t.matchAll(/E-mail\s*Id\s*[:\-]?\s*([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/gi)];
+    for(const m of allMatches){
+      if(!isBlacklistedEmail(m[1])){ email=m[1]; break; }
+    }
   }
+
+  // Strategy 3: last resort, any bare email anywhere in the doc, still blacklist-filtered.
+  if(!email){
+    const bareMatches=[...t.matchAll(/([a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,})/g)];
+    for(const m of bareMatches){
+      if(!isBlacklistedEmail(m[1])){ email=m[1]; break; }
+    }
+  }
+
   set('fEmail', email||'');
+
+  // ── ADDRESS ──
+  const address=get([
+    /Proposer\s*Address\s*[:\-]?\s*([\s\S]+?)(?=\s*(?:Mobile|Phone\s*No|E-mail|City|Pin\s*Code|State)\s*[:\-])/i,
+    /Address\s*[:\-]?\s*([\s\S]+?)(?=\s*(?:Mobile|Phone\s*No|E-mail|City|Pin\s*Code|State)\s*[:\-])/i
+  ]);
+  set('fAddress', address ? address.replace(/\s+/g,' ').trim() : '');
+  if(!address) missing.push('Address');
 
   // ── POLICY NUMBER ──
   const policy=get([
@@ -720,6 +760,7 @@ async function saveCustomer(){
       id:customerId,
       name, mobile,
       email:document.getElementById('fEmail').value.trim(),
+      address:document.getElementById('fAddress').value.trim(),
       policy,
       product:document.getElementById('fProduct').value,
       premium:document.getElementById('fPremium').value.trim(),
@@ -748,7 +789,7 @@ async function saveCustomer(){
 }
 
 function resetForm(){
-  ['fName','fMobile','fEmail','fPolicy','fPremium','fSum','fStart','fRenewal'].forEach(id=>{
+  ['fName','fMobile','fEmail','fAddress','fPolicy','fPremium','fSum','fStart','fRenewal'].forEach(id=>{
     const el=document.getElementById(id); if(el) el.value='';
   });
   document.getElementById('memberBody').innerHTML='';
@@ -904,6 +945,10 @@ function viewCust(id){
         <div class="ir"><span class="lb">Start Date</span><span class="vl">${fmtDate(c.startDate)}</span></div>
         <div class="ir"><span class="lb">Renewal Date</span><span class="vl">${fmtDate(c.renewalDate)}</span></div>
         <div class="ir"><span class="lb">Status</span><span class="vl">${renewalBadge(c.renewalDate)}</span></div>
+      </div>
+      <div class="info-box">
+        <h3>Address</h3>
+        <div class="ir"><span class="vl">${escH(c.address||'—')}</span></div>
       </div>
     </div>
 
@@ -1081,7 +1126,7 @@ async function importExcel(event){
       if(exists) return;
       customersCache.push({
         id:'cust_'+Date.now()+'_'+Math.random().toString(36).slice(2,7),
-        name:g.name, mobile:g.mobile, email:'', policy:g.policy,
+        name:g.name, mobile:g.mobile, email:'', address:'', policy:g.policy,
         product:'Star Health Assure Insurance', premium:'', sumInsured:g.sumInsured,
         startDate:'', renewalDate:g.renewalDate, members:g.members,
         photoLink:'', docs:{}, driveFolderId:null, savedAt:new Date().toISOString()
