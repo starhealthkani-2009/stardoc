@@ -9,8 +9,11 @@ const APP_FOLDER_NAME='StarDoc Manager Data';
 const DB_FILE_NAME='stardoc_database.json';
 
 // Known non-customer emails that should NEVER be auto-filled as the customer's email
-// (agent / branch office addresses that appear multiple times in Star Health PDFs)
-const KNOWN_AGENT_EMAILS=['tirupur@starhealth.in','kani.spsubbu@gmail.com'];
+// (agent / branch office addresses that appear multiple times in Star Health PDFs).
+// Any email ending in @starhealth.in (or the @starthealth.in typo seen in some PDFs)
+// is always treated as a company/branch/agent address, never the customer's.
+const KNOWN_AGENT_EMAILS=['kani.spsubbu@gmail.com'];
+const BLACKLISTED_EMAIL_DOMAINS=/@star[t]?health\.in$/i;
 
 let tokenClient=null;
 let accessToken=null;
@@ -311,12 +314,13 @@ async function readPDF(event){
 }
 
 // Returns true if an email should NEVER be auto-filled as the customer's email
-// (covers Star Health branch/agent addresses that repeat across the PDF)
+// (covers ALL @starhealth.in / @starthealth.in branch & agent addresses, plus
+// specific known agent personal emails like kani.spsubbu@gmail.com)
 function isBlacklistedEmail(e){
   if(!e) return true;
   const lower=e.trim().toLowerCase();
   if(KNOWN_AGENT_EMAILS.includes(lower)) return true;
-  if(/star[t]?health/i.test(lower)) return true;
+  if(BLACKLISTED_EMAIL_DOMAINS.test(lower)) return true;
   return false;
 }
 
@@ -404,10 +408,30 @@ function fillForm(text){
   set('fEmail', email||'');
 
   // ── ADDRESS ──
-  const address=get([
-    /Proposer\s*Address\s*[:\-]?\s*([\s\S]+?)(?=\s*(?:Mobile|Phone\s*No|E-mail|City|Pin\s*Code|State)\s*[:\-])/i,
-    /Address\s*[:\-]?\s*([\s\S]+?)(?=\s*(?:Mobile|Phone\s*No|E-mail|City|Pin\s*Code|State)\s*[:\-])/i
+  // Star Health PDFs have two address sources:
+  // 1) The cover-letter "To," block (page 1) — clean, single-column, most reliable.
+  // 2) The "Proposer Address :" table on the policy schedule page — this is a
+  //    two-column table (Proposer Address | Issuing Office Address) and pdf.js's
+  //    line-based text extraction often interleaves/swaps the label and its data,
+  //    so it's used only as a last-resort fallback.
+  let address=get([
+    // "To, IMPORTANT <NAME> , <ADDRESS LINES...> Mobile : <number>"
+    /To,?\s+(?:IMPORTANT\s+)?[A-Z][A-Z\.\s]+?,\s*(.+?)\s*Mobile\s*:/i,
+    // Variant without "IMPORTANT"
+    /To,?\s+[A-Z][A-Z\.\s]+?,\s*(.+?)\s*Mobile\s*:/i
   ]);
+
+  if(!address){
+    // Fallback: table-based "Proposer Address :" — only use this if it doesn't
+    // look like it accidentally captured a phone number (common swap artifact).
+    const tableAddr=get([
+      /Proposer\s*Address\s*[:\-]?\s*([\s\S]+?)(?=\s*(?:Mobile|Phone\s*No|E-mail|City|Pin\s*Code|State)\s*[:\-])/i,
+      /Address\s*[:\-]?\s*([\s\S]+?)(?=\s*(?:Mobile|Phone\s*No|E-mail|City|Pin\s*Code|State)\s*[:\-])/i
+    ]);
+    // Reject results that are mostly digits/phone-number-like (the swap artifact)
+    if(tableAddr && !/^[\d\-\/\s]+$/.test(tableAddr)) address=tableAddr;
+  }
+
   set('fAddress', address ? address.replace(/\s+/g,' ').trim() : '');
   if(!address) missing.push('Address');
 
